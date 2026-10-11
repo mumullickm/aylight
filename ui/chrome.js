@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const api = window.aylight;
 const address = $('address');
-let state = { tabs: [], activeId: null };
+let state = { tabs: [], bookmarks: [], activeId: null, sidebar: true };
 let editing = false;
 
 const closeIcon = '<svg viewBox="0 0 10 10"><path d="m1 1 8 8M9 1 1 9"/></svg>';
@@ -10,34 +10,64 @@ function displayURL(url) {
   return url.replace(/^https:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
 }
 
+function lead(item) {
+  if (item.loading) { const s = document.createElement('span'); s.className = 'spin'; return s; }
+  if (item.favicon) {
+    const img = document.createElement('img'); img.className = 'fav'; img.src = item.favicon;
+    img.onerror = () => { img.removeAttribute('src'); img.classList.add('blank'); };
+    return img;
+  }
+  const s = document.createElement('span'); s.className = 'fav blank'; return s;
+}
+
+function row(item, { on, label, onClose }) {
+  const el = document.createElement('div');
+  el.className = 'row' + (on ? ' on' : '');
+  el.title = item.url || item.title;
+  const title = document.createElement('span');
+  title.className = 'title';
+  title.textContent = label;
+  const x = document.createElement('button');
+  x.className = 'x';
+  x.innerHTML = closeIcon;
+  x.onclick = (e) => { e.stopPropagation(); onClose(); };
+  el.append(lead(item), title, x);
+  return el;
+}
+
 function render() {
   const tabsEl = $('tabs');
   tabsEl.textContent = '';
   for (const t of state.tabs) {
-    const el = document.createElement('div');
-    el.className = 'tab' + (t.id === state.activeId ? ' on' : '');
-    el.title = t.title;
-    let lead;
-    if (t.loading) { lead = document.createElement('span'); lead.className = 'spin'; }
-    else if (t.favicon) {
-      lead = document.createElement('img'); lead.className = 'fav'; lead.src = t.favicon;
-      lead.onerror = () => { lead.removeAttribute('src'); lead.classList.add('blank'); };
-    } else { lead = document.createElement('span'); lead.className = 'fav blank'; }
-    const title = document.createElement('span');
-    title.className = 'title';
-    title.textContent = t.title || displayURL(t.url) || 'New Tab';
-    const close = document.createElement('button');
-    close.className = 'close';
-    close.innerHTML = closeIcon;
-    close.onclick = (e) => { e.stopPropagation(); api.send('close-tab', t.id); };
-    el.append(lead, title, close);
+    const el = row(t, {
+      on: t.id === state.activeId,
+      label: t.title || displayURL(t.url) || 'New Tab',
+      onClose: () => api.send('close-tab', t.id),
+    });
     el.onmousedown = (e) => { if (e.button === 0) api.send('activate', t.id); };
     el.onauxclick = (e) => { if (e.button === 1) api.send('close-tab', t.id); };
     tabsEl.append(el);
   }
+
+  const bmEl = $('bookmarks');
+  bmEl.textContent = '';
+  for (const b of state.bookmarks) {
+    const el = row(b, {
+      on: false,
+      label: b.title || displayURL(b.url),
+      onClose: () => api.send('bookmark-remove', b.url),
+    });
+    el.onclick = (e) => api.send('open', { url: b.url, newTab: e.metaKey || e.ctrlKey });
+    el.onauxclick = (e) => { if (e.button === 1) api.send('open', { url: b.url, newTab: true }); };
+    bmEl.append(el);
+  }
+
   const a = state.tabs.find((t) => t.id === state.activeId);
   $('back').disabled = !state.canBack;
   $('forward').disabled = !state.canForward;
+  $('star').classList.toggle('on', !!state.bookmarked);
+  $('star').disabled = !(a && /^https?:/.test(a.url));
+  document.body.classList.toggle('nosb', !state.sidebar);
   document.body.classList.toggle('loading', !!(a && a.loading));
   document.body.classList.toggle('secure', !!(a && a.url.startsWith('https://')));
   if (!editing) address.value = a ? displayURL(a.url) : '';
@@ -51,7 +81,9 @@ $('new').onclick = () => api.send('new-tab');
 $('back').onclick = () => api.send('back');
 $('forward').onclick = () => api.send('forward');
 $('reload').onclick = () => api.send('reload');
-$('strip').ondblclick = (e) => { if (e.target.id === 'strip' || e.target.id === 'tabs') api.send('new-tab'); };
+$('star').onclick = () => api.send('bookmark-toggle');
+$('sidetoggle').onclick = () => api.send('toggle-sidebar');
+$('side').ondblclick = (e) => { if (e.target.id === 'side' || e.target.id === 'side-top') api.send('new-tab'); };
 
 address.onfocus = () => {
   editing = true;

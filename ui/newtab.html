@@ -4,17 +4,26 @@
 <meta charset="utf-8">
 <title>New Tab</title>
 <style>
-  :root { --bg: #faf9f6; --ink: #1d1c1a; --ink-2: #8a877f; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #1c1b1a; --ink: #ecebe7; --ink-2: #8a877f; } }
+  :root { --ink: #1b1f26; --ink-2: rgba(27,31,38,.55); --glass: rgba(255,255,255,.5); --edge: rgba(255,255,255,.7);
+    --bg: radial-gradient(900px 600px at 15% 10%, #d9ece4 0%, transparent 60%),
+          radial-gradient(800px 600px at 85% 90%, #dfe6f3 0%, transparent 60%), #eef1f4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #e9ecf1; --ink-2: rgba(233,236,241,.55); --glass: rgba(255,255,255,.06); --edge: rgba(255,255,255,.12);
+      --bg: radial-gradient(900px 600px at 15% 10%, #10332a 0%, transparent 60%),
+            radial-gradient(800px 600px at 85% 90%, #141c33 0%, transparent 60%), #0f1316; }
+  }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
-  main { height: 100%; display: grid; place-content: center; text-align: center; gap: 10px; user-select: none; }
-  #time { font-size: 88px; font-weight: 200; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-  #date { font-size: 15px; color: var(--ink-2); letter-spacing: .02em; }
+  main { height: 100%; display: grid; place-content: center; user-select: none; }
+  .card { padding: 40px 64px; text-align: center; border-radius: 24px; background: var(--glass); border: 1px solid var(--edge);
+    backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 20px 60px -30px rgba(0,0,0,.35); }
+  #time { font-size: 88px; font-weight: 200; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  #date { margin-top: 12px; font-size: 15px; color: var(--ink-2); letter-spacing: .02em; }
 </style>
 </head>
 <body>
-<main><div id="time"></div><div id="date"></div></main>
+<main><div class="card"><div id="time"></div><div id="date"></div></div></main>
 <script>
   const tick = () => {
     const d = new Date();

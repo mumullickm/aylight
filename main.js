@@ -1,13 +1,18 @@
-const { app, BrowserWindow, WebContentsView, ipcMain, Menu, session, clipboard, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, Menu, session, clipboard, shell, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 
 app.setName('aylight');
 
-const TOP = 86;
+const TOP = 56;
+const SIDEBAR = 236;
+const GAP = 10;
+const RADIUS = 12;
 const PARTITION = 'persist:main';
 const NEWTAB = pathToFileURL(path.join(__dirname, 'ui', 'newtab.html')).href;
+const isMac = process.platform === 'darwin';
+const isWin = process.platform === 'win32';
 
 let win = null;
 let tabs = [];
@@ -15,6 +20,8 @@ let activeId = null;
 let nextId = 1;
 const closedStack = [];
 let history = [];
+let bookmarks = [];
+let settings = { sidebar: true };
 
 const file = (name) => path.join(app.getPath('userData'), name);
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
@@ -34,14 +41,16 @@ function toURL(input) {
 }
 
 const active = () => tabs.find((t) => t.id === activeId);
+const sidebarWidth = () => (settings.sidebar ? SIDEBAR : 0);
 
 function layout() {
   if (!win) return;
   const [w, h] = win.getContentSize();
+  const x = sidebarWidth() + (settings.sidebar ? 0 : GAP);
   for (const t of tabs) {
     const on = t.id === activeId;
     t.view.setVisible(on);
-    if (on) t.view.setBounds({ x: 0, y: TOP, width: w, height: Math.max(0, h - TOP) });
+    if (on) t.view.setBounds({ x, y: TOP, width: Math.max(0, w - x - GAP), height: Math.max(0, h - TOP - GAP) });
   }
 }
 
@@ -51,8 +60,11 @@ function pushState() {
   const nav = a ? a.view.webContents.navigationHistory : null;
   win.webContents.send('state', {
     activeId,
+    sidebar: settings.sidebar,
     canBack: nav ? nav.canGoBack() : false,
     canForward: nav ? nav.canGoForward() : false,
+    bookmarked: !!(a && bookmarks.some((b) => b.url === a.url)),
+    bookmarks,
     tabs: tabs.map((t) => ({
       id: t.id,
       title: t.title,
@@ -74,6 +86,7 @@ function createTab(url = NEWTAB, focus = true) {
   const view = new WebContentsView({
     webPreferences: { partition: PARTITION, sandbox: true, contextIsolation: true },
   });
+  view.setBorderRadius(RADIUS);
   const tab = { id: nextId++, view, title: 'New Tab', url, favicon: null, loading: false };
   const wc = view.webContents;
 
@@ -146,6 +159,29 @@ function cycle(step) {
   activate(tabs[(i + step + tabs.length) % tabs.length].id);
 }
 
+function toggleSidebar() {
+  settings.sidebar = !settings.sidebar;
+  writeJSON(file('settings.json'), settings);
+  layout();
+  pushState();
+}
+
+function toggleBookmark() {
+  const a = active();
+  if (!a || !/^https?:/.test(a.url)) return;
+  const i = bookmarks.findIndex((b) => b.url === a.url);
+  if (i >= 0) bookmarks.splice(i, 1);
+  else bookmarks.push({ url: a.url, title: a.title, favicon: a.favicon, t: Date.now() });
+  writeJSON(file('bookmarks.json'), bookmarks);
+  pushState();
+}
+
+function removeBookmark(url) {
+  bookmarks = bookmarks.filter((b) => b.url !== url);
+  writeJSON(file('bookmarks.json'), bookmarks);
+  pushState();
+}
+
 function openFind() {
   win.webContents.focus();
   win.webContents.send('find-open');
@@ -197,7 +233,6 @@ function contextMenu(wc, p) {
 const onActive = (fn) => () => { const a = active(); if (a) fn(a.view.webContents); };
 
 function buildMenu() {
-  const isMac = process.platform === 'darwin';
   const tabKeys = Array.from({ length: 9 }, (_, n) => ({
     label: `Tab ${n + 1}`,
     accelerator: `CmdOrCtrl+${n + 1}`,
@@ -231,6 +266,8 @@ function buildMenu() {
     {
       label: 'View',
       submenu: [
+        { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+Shift+S', click: toggleSidebar },
+        { type: 'separator' },
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: onActive((wc) => wc.reload()) },
         { label: 'Hard Reload', accelerator: 'CmdOrCtrl+Shift+R', click: onActive((wc) => wc.reloadIgnoringCache()) },
         { type: 'separator' },
@@ -240,6 +277,12 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Developer Tools', accelerator: isMac ? 'Alt+Cmd+I' : 'Ctrl+Shift+I', click: onActive((wc) => wc.toggleDevTools()) },
         { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Bookmarks',
+      submenu: [
+        { label: 'Bookmark This Page', accelerator: 'CmdOrCtrl+D', click: toggleBookmark },
       ],
     },
     {
@@ -275,12 +318,15 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1360,
     height: 880,
-    minWidth: 520,
-    minHeight: 360,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    titleBarOverlay: process.platform === 'darwin' ? false : { height: 40, color: '#00000000', symbolColor: '#888' },
-    trafficLightPosition: { x: 14, y: 13 },
-    backgroundColor: '#f4f3f0',
+    minWidth: 560,
+    minHeight: 380,
+    titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+    titleBarOverlay: isMac ? false : { height: 40, color: '#00000000', symbolColor: nativeTheme.shouldUseDarkColors ? '#d9dde3' : '#3a3f47' },
+    trafficLightPosition: { x: 16, y: 18 },
+    backgroundColor: process.platform === 'linux' ? '#0f1316' : '#00000000',
+    vibrancy: isMac ? 'sidebar' : undefined,
+    visualEffectState: isMac ? 'active' : undefined,
+    backgroundMaterial: isWin ? 'acrylic' : undefined,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   });
   win.loadFile(path.join(__dirname, 'ui', 'index.html'));
@@ -309,10 +355,17 @@ ipcMain.on('navigate', (_e, text) => {
   a.view.webContents.loadURL(toURL(text));
   a.view.webContents.focus();
 });
+ipcMain.on('open', (_e, { url, newTab }) => {
+  if (newTab || !active()) createTab(url, true);
+  else { const a = active(); a.view.webContents.loadURL(url); a.view.webContents.focus(); }
+});
 ipcMain.on('back', onActive((wc) => wc.navigationHistory.goBack()));
 ipcMain.on('forward', onActive((wc) => wc.navigationHistory.goForward()));
 ipcMain.on('reload', onActive((wc) => (wc.isLoading() ? wc.stop() : wc.reload())));
 ipcMain.on('escape-address', onActive((wc) => wc.focus()));
+ipcMain.on('toggle-sidebar', toggleSidebar);
+ipcMain.on('bookmark-toggle', toggleBookmark);
+ipcMain.on('bookmark-remove', (_e, url) => removeBookmark(url));
 ipcMain.on('find', (_e, { text, forward, next }) => {
   const a = active();
   if (!a) return;
@@ -349,6 +402,8 @@ app.whenReady().then(() => {
     item.once('done', (_ev, state) => { if (state === 'completed') shell.showItemInFolder(item.getSavePath()); });
   });
   history = readJSON(file('history.json'), []);
+  bookmarks = readJSON(file('bookmarks.json'), []);
+  settings = { ...settings, ...readJSON(file('settings.json'), {}) };
   buildMenu();
   createWindow();
   app.on('activate', () => { if (!win) createWindow(); });

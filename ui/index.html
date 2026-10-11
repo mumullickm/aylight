@@ -6,27 +6,39 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <div id="strip">
-    <div id="tabs"></div>
-    <button id="new" class="icon" title="New tab (⌘T)">
-      <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+<aside id="side">
+  <div id="side-top"></div>
+  <div id="tabs"></div>
+  <button id="new" class="row ghost">
+    <span class="lead"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></span>
+    <span class="title">New tab</span>
+    <span class="hint">⌘T</span>
+  </button>
+  <div id="bm-head">Bookmarks</div>
+  <div id="bookmarks"></div>
+  <div id="bm-empty">Press ⌘D on a page to keep it here.</div>
+</aside>
+<main>
+  <header id="bar">
+    <button id="sidetoggle" class="icon" title="Toggle sidebar (⌘⇧S)" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2.5"/><path d="M6 3v10"/></svg>
     </button>
-  </div>
-  <div id="bar">
-    <button id="back" class="icon" title="Back">
+    <button id="back" class="icon" title="Back" aria-label="Back">
       <svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg>
     </button>
-    <button id="forward" class="icon" title="Forward">
+    <button id="forward" class="icon" title="Forward" aria-label="Forward">
       <svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></svg>
     </button>
-    <button id="reload" class="icon" title="Reload">
+    <button id="reload" class="icon" title="Reload" aria-label="Reload">
       <svg class="r" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.55M13 2.5V5h-2.5"/></svg>
       <svg class="x" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></svg>
     </button>
     <form id="form">
       <span id="lock"><svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
       <input id="address" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL">
+      <button type="button" id="star" class="icon" title="Bookmark (⌘D)" aria-label="Bookmark this page">
+        <svg viewBox="0 0 16 16"><path d="M8 2.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9L8 11.3l-3.5 1.9.8-3.9L2.4 6.6l3.9-.5z"/></svg>
+      </button>
     </form>
     <div id="find" hidden>
       <input id="findq" spellcheck="false" autocomplete="off" placeholder="Find in page" aria-label="Find in page">
@@ -35,8 +47,9 @@
       <button id="findnext" class="icon" title="Next (⌘G)" aria-label="Next match"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
       <button id="findx" class="icon" title="Close (Esc)" aria-label="Close find"><svg viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
     </div>
-  </div>
-</header>
+  </header>
+  <div id="page"></div>
+</main>
 <script src="chrome.js"></script>
 </body>
 </html>
