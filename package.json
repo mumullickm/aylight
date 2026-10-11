@@ -30,7 +30,7 @@
       "ui/**",
       "package.json"
     ],
-    "artifactName": "Lumen-${version}-${os}-${arch}.${ext}",
+    "artifactName": "Lumen-${os}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
