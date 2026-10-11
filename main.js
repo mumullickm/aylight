@@ -22,6 +22,9 @@ const closedStack = [];
 let history = [];
 let bookmarks = [];
 let settings = { sidebar: true };
+let downloads = [];
+const downloadItems = new Map();
+let nextDownloadId = 1;
 
 const file = (name) => path.join(app.getPath('userData'), name);
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
@@ -65,6 +68,7 @@ function pushState() {
     canForward: nav ? nav.canGoForward() : false,
     bookmarked: !!(a && bookmarks.some((b) => b.url === a.url)),
     bookmarks,
+    downloads,
     tabs: tabs.map((t) => ({
       id: t.id,
       title: t.title,
@@ -428,6 +432,26 @@ ipcMain.on('find', (_e, { text, forward, next }) => {
 });
 ipcMain.on('find-close', () => { closeFind(); onActive((wc) => wc.focus())(); });
 ipcMain.handle('jump', (_e, q) => jump(q));
+ipcMain.on('download-open', (_e, id) => {
+  const d = downloads.find((x) => x.id === id);
+  if (!d || d.state !== 'completed') return;
+  if (fs.existsSync(d.path)) shell.openPath(d.path);
+  else { d.state = 'missing'; pushState(); }
+});
+ipcMain.on('download-reveal', (_e, id) => {
+  const d = downloads.find((x) => x.id === id);
+  if (d && fs.existsSync(d.path)) shell.showItemInFolder(d.path);
+});
+ipcMain.on('download-remove', (_e, id) => {
+  const item = downloadItems.get(id);
+  if (item) { item.cancel(); downloadItems.delete(id); }
+  downloads = downloads.filter((x) => x.id !== id);
+  pushState();
+});
+ipcMain.on('downloads-clear', () => {
+  downloads = downloads.filter((x) => downloadItems.has(x.id));
+  pushState();
+});
 ipcMain.on('jump-close', () => { closeJump(); onActive((wc) => wc.focus())(); });
 ipcMain.on('jump-go', (_e, { tab, url, newTab }) => {
   closeJump();
@@ -460,8 +484,29 @@ app.whenReady().then(() => {
   ses.setUserAgent(ua);
   app.userAgentFallback = ua;
   ses.on('will-download', (_e, item) => {
-    item.setSavePath(path.join(app.getPath('downloads'), item.getFilename()));
-    item.once('done', (_ev, state) => { if (state === 'completed') shell.showItemInFolder(item.getSavePath()); });
+    const dir = app.getPath('downloads');
+    let name = item.getFilename();
+    const ext = path.extname(name);
+    const stem = name.slice(0, name.length - ext.length);
+    for (let n = 2; fs.existsSync(path.join(dir, name)); n++) name = `${stem} ${n}${ext}`;
+    item.setSavePath(path.join(dir, name));
+    const d = { id: nextDownloadId++, name, path: item.getSavePath(), received: 0, total: item.getTotalBytes(), state: 'progressing', t: Date.now() };
+    downloads.unshift(d);
+    if (downloads.length > 20) downloads.length = 20;
+    downloadItems.set(d.id, item);
+    item.on('updated', (_ev, state) => {
+      d.received = item.getReceivedBytes();
+      d.total = item.getTotalBytes();
+      d.state = state === 'interrupted' ? 'interrupted' : item.isPaused() ? 'paused' : 'progressing';
+      pushState();
+    });
+    item.once('done', (_ev, state) => {
+      d.received = item.getReceivedBytes();
+      d.state = state;
+      downloadItems.delete(d.id);
+      pushState();
+    });
+    pushState();
   });
   history = readJSON(file('history.json'), []);
   pruneHistory();

@@ -71,6 +71,7 @@ function render() {
   document.body.classList.toggle('loading', !!(a && a.loading));
   document.body.classList.toggle('secure', !!(a && a.url.startsWith('https://')));
   if (!editing) address.value = a ? displayURL(a.url) : '';
+  renderDownloads();
 }
 
 api.on('state', (s) => { state = s; render(); });
@@ -237,3 +238,51 @@ jumpq.onkeydown = (e) => {
   else if (e.key === 'Escape') api.send('jump-close');
 };
 jump.onmousedown = (e) => { if (e.target === jump) api.send('jump-close'); };
+
+const dlIcon = '<svg viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10"/></svg>';
+const fileIcon = '<svg viewBox="0 0 16 16"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3"/></svg>';
+
+function mb(n) { return n >= 1048576 ? (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+function renderDownloads() {
+  const list = state.downloads || [];
+  $('dl-head').hidden = !list.length;
+  const el = $('downloads');
+  el.textContent = '';
+  for (const d of list) {
+    const row = document.createElement('div');
+    const done = d.state === 'completed';
+    const bad = d.state === 'cancelled' || d.state === 'interrupted' || d.state === 'missing';
+    row.className = 'row' + (done ? ' done' : '') + (bad ? ' bad' : '');
+    row.title = d.path;
+    const lead = document.createElement('span');
+    lead.className = 'lead';
+    lead.innerHTML = done ? fileIcon : dlIcon;
+    const col = document.createElement('span');
+    col.className = 'col';
+    const t = document.createElement('span'); t.className = 'title'; t.textContent = d.name;
+    const sub = document.createElement('span'); sub.className = 'sub';
+    sub.textContent = done ? 'Done · click to open'
+      : d.state === 'missing' ? 'File was moved'
+      : d.state === 'cancelled' ? 'Cancelled'
+      : d.state === 'interrupted' ? 'Interrupted'
+      : d.total ? `${mb(d.received)} of ${mb(d.total)}` : mb(d.received);
+    col.append(t, sub);
+    const x = document.createElement('button');
+    x.className = 'x';
+    x.title = done || bad ? 'Remove from list' : 'Cancel';
+    x.innerHTML = closeIcon;
+    x.onclick = (e) => { e.stopPropagation(); api.send('download-remove', d.id); };
+    row.append(lead, col, x);
+    if (!done && !bad && d.total) {
+      const bar = document.createElement('span'); bar.className = 'bar';
+      bar.style.width = Math.round((d.received / d.total) * 100) + '%';
+      row.append(bar);
+    }
+    row.onclick = () => { if (done) api.send('download-open', d.id); };
+    row.oncontextmenu = (e) => { e.preventDefault(); api.send('download-reveal', d.id); };
+    el.append(row);
+  }
+}
+
+$('dl-clear').onclick = () => api.send('downloads-clear');
