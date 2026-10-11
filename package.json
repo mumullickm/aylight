@@ -1,0 +1,82 @@
+{
+  "name": "lumen",
+  "productName": "Lumen",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "description": "Lumen, a quiet personal browser by Aykiz Intelligence",
+  "author": {
+    "name": "Aykiz Intelligence",
+    "email": "hello@aykizintelligence.com"
+  },
+  "homepage": "https://aykizintelligence.com",
+  "build": {
+    "appId": "com.aykizintelligence.lumen",
+    "productName": "Lumen",
+    "files": [
+      "main.js",
+      "preload.js",
+      "ui/**",
+      "package.json"
+    ],
+    "artifactName": "Lumen-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "linux": {
+      "category": "Network",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "maintainer": "Aykiz Intelligence <hello@aykizintelligence.com>"
+    },
+    "publish": null
+  },
+  "packageManager": "pnpm@11.22.0"
+}

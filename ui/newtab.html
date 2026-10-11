@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>New Tab</title>
+<style>
+  :root { --bg: #faf9f6; --ink: #1d1c1a; --ink-2: #8a877f; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1c1b1a; --ink: #ecebe7; --ink-2: #8a877f; } }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  main { height: 100%; display: grid; place-content: center; text-align: center; gap: 10px; user-select: none; }
+  #time { font-size: 88px; font-weight: 200; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  #date { font-size: 15px; color: var(--ink-2); letter-spacing: .02em; }
+</style>
+</head>
+<body>
+<main><div id="time"></div><div id="date"></div></main>
+<script>
+  const tick = () => {
+    const d = new Date();
+    document.getElementById('time').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('date').textContent = d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+  tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
