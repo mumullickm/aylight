@@ -305,6 +305,14 @@ ipcMain.handle('complete', (_e, q) => {
   return null;
 });
 
+if (!app.requestSingleInstanceLock()) app.quit();
+
+app.on('second-instance', () => {
+  if (!win) return createWindow();
+  if (win.isMinimized()) win.restore();
+  win.focus();
+});
+
 app.whenReady().then(() => {
   const ses = session.fromPartition(PARTITION);
   const ua = cleanUA(ses.getUserAgent());
