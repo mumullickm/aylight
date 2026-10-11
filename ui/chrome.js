@@ -36,9 +36,20 @@ function row(item, { on, label, onClose }) {
 }
 
 function render() {
+  const pinsEl = $('pins');
+  pinsEl.textContent = '';
+  for (const t of state.tabs.filter((x) => x.pinned)) {
+    const el = document.createElement('div');
+    el.className = 'pin' + (t.id === state.activeId ? ' on' : '');
+    el.title = t.title || displayURL(t.url);
+    el.append(lead(t));
+    el.onmousedown = (e) => { if (e.button === 0) api.send('activate', t.id); };
+    el.onauxclick = (e) => { if (e.button === 1) api.send('pin-toggle', t.id); };
+    pinsEl.append(el);
+  }
   const tabsEl = $('tabs');
   tabsEl.textContent = '';
-  for (const t of state.tabs) {
+  for (const t of state.tabs.filter((x) => !x.pinned)) {
     const el = row(t, {
       on: t.id === state.activeId,
       label: t.title || displayURL(t.url) || 'New Tab',
@@ -66,6 +77,8 @@ function render() {
   $('back').disabled = !state.canBack;
   $('forward').disabled = !state.canForward;
   $('star').classList.toggle('on', !!state.bookmarked);
+  $('pin').classList.toggle('on', !!(a && a.pinned));
+  $('pin').disabled = !(a && /^https?:/.test(a.url));
   $('star').disabled = !(a && /^https?:/.test(a.url));
   document.body.classList.toggle('nosb', !state.sidebar);
   document.body.classList.toggle('loading', !!(a && a.loading));
@@ -83,6 +96,7 @@ $('back').onclick = () => api.send('back');
 $('forward').onclick = () => api.send('forward');
 $('reload').onclick = () => api.send('reload');
 $('star').onclick = () => api.send('bookmark-toggle');
+$('pin').onclick = () => api.send('pin-toggle', state.activeId);
 $('sidetoggle').onclick = () => api.send('toggle-sidebar');
 $('side').ondblclick = (e) => { if (e.target.id === 'side' || e.target.id === 'side-top') api.send('new-tab'); };
 

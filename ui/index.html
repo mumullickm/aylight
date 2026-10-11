@@ -8,6 +8,7 @@
 <body>
 <aside id="side">
   <div id="side-top"></div>
+  <div id="pins"></div>
   <div id="tabs"></div>
   <button id="new" class="row ghost">
     <span class="lead"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></span>
@@ -38,6 +39,9 @@
     <form id="form">
       <span id="lock"><svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
       <input id="address" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL">
+      <button type="button" id="pin" class="icon" title="Pin tab (⌘⇧P)" aria-label="Pin this tab">
+        <svg viewBox="0 0 16 16"><path d="M6 2h4M7 2v3.5L4.5 9h7L9 5.5V2M8 9v5"/></svg>
+      </button>
       <button type="button" id="star" class="icon" title="Bookmark (⌘D)" aria-label="Bookmark this page">
         <svg viewBox="0 0 16 16"><path d="M8 2.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9L8 11.3l-3.5 1.9.8-3.9L2.4 6.6l3.9-.5z"/></svg>
       </button>

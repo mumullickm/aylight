@@ -75,6 +75,7 @@ function pushState() {
       url: t.url === NEWTAB ? '' : t.url,
       favicon: t.favicon,
       loading: t.loading,
+      pinned: !!t.pinned,
     })),
   });
 }
@@ -138,12 +139,12 @@ function closeJump() {
   if (win && !win.isDestroyed()) win.webContents.send('jump-close');
 }
 
-function createTab(url = NEWTAB, focus = true) {
+function createTab(url = NEWTAB, focus = true, pinned = false) {
   const view = new WebContentsView({
     webPreferences: { partition: PARTITION, sandbox: true, contextIsolation: true },
   });
   view.setBorderRadius(RADIUS);
-  const tab = { id: nextId++, view, title: 'New Tab', url, favicon: null, loading: false };
+  const tab = { id: nextId++, view, title: 'New Tab', url, favicon: null, loading: false, pinned };
   const wc = view.webContents;
 
   wc.setWindowOpenHandler(({ url: target, disposition }) => {
@@ -179,7 +180,8 @@ function createTab(url = NEWTAB, focus = true) {
     if (tab.id === activeId) win.webContents.send('find-result', { active: r.activeMatchOrdinal, total: r.matches });
   });
 
-  tabs.push(tab);
+  if (pinned) tabs.splice(tabs.filter((t) => t.pinned).length, 0, tab);
+  else tabs.push(tab);
   win.contentView.addChildView(view);
   wc.loadURL(url);
   if (focus) activate(tab.id);
@@ -199,9 +201,25 @@ function activate(id) {
   if (a && a.url !== NEWTAB) a.view.webContents.focus();
 }
 
-function closeTab(id = activeId) {
+function togglePin(id = activeId) {
+  const i = tabs.findIndex((t) => t.id === id);
+  if (i < 0 || tabs[i].url === NEWTAB) return;
+  const [tab] = tabs.splice(i, 1);
+  tab.pinned = !tab.pinned;
+  if (tab.pinned) tabs.splice(tabs.filter((t) => t.pinned).length, 0, tab);
+  else tabs.splice(tabs.filter((t) => t.pinned).length, 0, tab);
+  saveSession();
+  pushState();
+}
+
+function closeTab(id = activeId, force = false) {
   const i = tabs.findIndex((t) => t.id === id);
   if (i < 0) return;
+  if (tabs[i].pinned && !force) {
+    const next = tabs.find((t) => !t.pinned);
+    if (next) activate(next.id); else createTab();
+    return;
+  }
   const [tab] = tabs.splice(i, 1);
   if (tab.url !== NEWTAB) closedStack.push(tab.url);
   win.contentView.removeChildView(tab.view);
@@ -316,6 +334,7 @@ function buildMenu() {
         { label: 'Find Next', accelerator: 'CmdOrCtrl+G', click: () => win.webContents.send('find-step', true) },
         { label: 'Find Previous', accelerator: 'CmdOrCtrl+Shift+G', click: () => win.webContents.send('find-step', false) },
         { type: 'separator' },
+        { label: 'Pin Tab', accelerator: 'CmdOrCtrl+Shift+P', click: () => togglePin() },
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => closeTab() },
         ...(isMac ? [] : [{ role: 'quit' }]),
       ],
@@ -366,7 +385,8 @@ function buildMenu() {
 
 function saveSession() {
   writeJSON(file('session.json'), {
-    urls: tabs.map((t) => t.url).filter((u) => u !== NEWTAB),
+    urls: tabs.filter((t) => !t.pinned).map((t) => t.url).filter((u) => u !== NEWTAB),
+    pinned: tabs.filter((t) => t.pinned).map((t) => t.url),
     active: tabs.findIndex((t) => t.id === activeId),
   });
   writeJSON(file('history.json'), history);
@@ -395,7 +415,8 @@ function createWindow() {
   win.webContents.once('did-finish-load', () => {
     win.webContents.send('platform', process.platform);
     const saved = readJSON(file('session.json'), { urls: [] });
-    if (saved.urls.length) {
+    (saved.pinned || []).forEach((u) => createTab(u, false, true));
+    if (saved.urls.length || tabs.length) {
       saved.urls.forEach((u) => createTab(u, false));
       activate(tabs[Math.max(0, Math.min(saved.active, tabs.length - 1))].id);
     } else {
@@ -406,6 +427,7 @@ function createWindow() {
 
 ipcMain.on('new-tab', () => createTab());
 ipcMain.on('close-tab', (_e, id) => closeTab(id));
+ipcMain.on('pin-toggle', (_e, id) => togglePin(id));
 ipcMain.on('activate', (_e, id) => activate(id));
 ipcMain.on('navigate', (_e, text) => {
   const a = active();
