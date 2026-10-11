@@ -69,3 +69,10 @@ body.secure #lock { display: block; }
 #address { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--ink); font: inherit;
   font-size: 13.5px; user-select: text; }
 #address::placeholder { color: var(--ink-2); }
+#find { display: flex; align-items: center; gap: 2px; margin-left: 8px; height: 32px; padding: 0 4px 0 10px;
+  border-radius: 10px; background: var(--field); }
+#find[hidden] { display: none; }
+#find:focus-within { background: var(--field-on); box-shadow: 0 0 0 1.5px var(--ring); }
+#findq { width: 180px; border: 0; outline: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; user-select: text; }
+#findn { min-width: 44px; text-align: right; color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; margin-right: 4px; }
+#find .icon { width: 26px; height: 26px; }

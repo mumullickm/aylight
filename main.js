@@ -106,6 +106,9 @@ function createTab(url = NEWTAB, focus = true) {
   wc.on('did-navigate', onNav);
   wc.on('did-navigate-in-page', (e, u, isMain) => { if (isMain) onNav(e, u); });
   wc.on('context-menu', (_e, p) => contextMenu(wc, p));
+  wc.on('found-in-page', (_e, r) => {
+    if (tab.id === activeId) win.webContents.send('find-result', { active: r.activeMatchOrdinal, total: r.matches });
+  });
 
   tabs.push(tab);
   win.contentView.addChildView(view);
@@ -118,6 +121,7 @@ function createTab(url = NEWTAB, focus = true) {
 
 function activate(id) {
   if (!tabs.some((t) => t.id === id)) return;
+  closeFind();
   activeId = id;
   layout();
   pushState();
@@ -140,6 +144,17 @@ function closeTab(id = activeId) {
 function cycle(step) {
   const i = tabs.findIndex((t) => t.id === activeId);
   activate(tabs[(i + step + tabs.length) % tabs.length].id);
+}
+
+function openFind() {
+  win.webContents.focus();
+  win.webContents.send('find-open');
+}
+
+function closeFind() {
+  const a = active();
+  if (a) a.view.webContents.stopFindInPage('clearSelection');
+  if (win && !win.isDestroyed()) win.webContents.send('find-close');
 }
 
 function focusAddress() {
@@ -203,6 +218,10 @@ function buildMenu() {
           click: () => { const u = closedStack.pop(); if (u) createTab(u); },
         },
         { label: 'Open Location', accelerator: 'CmdOrCtrl+L', click: focusAddress },
+        { type: 'separator' },
+        { label: 'Find', accelerator: 'CmdOrCtrl+F', click: openFind },
+        { label: 'Find Next', accelerator: 'CmdOrCtrl+G', click: () => win.webContents.send('find-step', true) },
+        { label: 'Find Previous', accelerator: 'CmdOrCtrl+Shift+G', click: () => win.webContents.send('find-step', false) },
         { type: 'separator' },
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => closeTab() },
         ...(isMac ? [] : [{ role: 'quit' }]),
@@ -294,6 +313,13 @@ ipcMain.on('back', onActive((wc) => wc.navigationHistory.goBack()));
 ipcMain.on('forward', onActive((wc) => wc.navigationHistory.goForward()));
 ipcMain.on('reload', onActive((wc) => (wc.isLoading() ? wc.stop() : wc.reload())));
 ipcMain.on('escape-address', onActive((wc) => wc.focus()));
+ipcMain.on('find', (_e, { text, forward, next }) => {
+  const a = active();
+  if (!a) return;
+  if (!text) { a.view.webContents.stopFindInPage('clearSelection'); return; }
+  a.view.webContents.findInPage(text, { forward, findNext: !next });
+});
+ipcMain.on('find-close', () => { closeFind(); onActive((wc) => wc.focus())(); });
 ipcMain.handle('complete', (_e, q) => {
   const s = q.toLowerCase();
   for (const h of history) {

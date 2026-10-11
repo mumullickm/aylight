@@ -84,3 +84,26 @@ $('form').onsubmit = (e) => {
   api.send('navigate', address.value);
   address.blur();
 };
+
+const find = $('find');
+const findq = $('findq');
+const findn = $('findn');
+
+function runFind(forward = true, next = false) {
+  api.send('find', { text: findq.value, forward, next });
+  if (!findq.value) findn.textContent = '';
+}
+
+api.on('find-open', () => { find.hidden = false; findq.focus(); findq.select(); if (findq.value) runFind(); });
+api.on('find-close', () => { find.hidden = true; findn.textContent = ''; });
+api.on('find-step', (forward) => { if (!find.hidden && findq.value) runFind(forward, true); });
+api.on('find-result', ({ active, total }) => { findn.textContent = total ? `${active}/${total}` : 'None'; });
+
+findq.oninput = () => runFind();
+findq.onkeydown = (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); runFind(!e.shiftKey, true); }
+  if (e.key === 'Escape') api.send('find-close');
+};
+$('findprev').onclick = () => runFind(false, true);
+$('findnext').onclick = () => runFind(true, true);
+$('findx').onclick = () => api.send('find-close');

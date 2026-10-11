@@ -28,6 +28,13 @@
       <span id="lock"><svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
       <input id="address" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL">
     </form>
+    <div id="find" hidden>
+      <input id="findq" spellcheck="false" autocomplete="off" placeholder="Find in page" aria-label="Find in page">
+      <span id="findn"></span>
+      <button id="findprev" class="icon" title="Previous (⇧⌘G)" aria-label="Previous match"><svg viewBox="0 0 16 16"><path d="m4 10 4-4 4 4"/></svg></button>
+      <button id="findnext" class="icon" title="Next (⌘G)" aria-label="Next match"><svg viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+      <button id="findx" class="icon" title="Close (Esc)" aria-label="Close find"><svg viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
+    </div>
   </div>
 </header>
 <script src="chrome.js"></script>
