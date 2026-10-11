@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const api = window.lumen;
+const api = window.aylight;
 const address = $('address');
 let state = { tabs: [], activeId: null };
 let editing = false;

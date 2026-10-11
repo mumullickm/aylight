@@ -1,6 +1,6 @@
 {
-  "name": "lumen",
-  "productName": "Lumen",
+  "name": "aylight",
+  "productName": "aylight",
   "version": "0.1.1",
   "private": true,
   "main": "main.js",
@@ -15,22 +15,22 @@
     "electron": "^44.7.0",
     "electron-builder": "^26.15.3"
   },
-  "description": "Lumen, a quiet personal browser by Aykiz Intelligence",
+  "description": "aylight, a quiet personal browser by Aykiz Intelligence",
   "author": {
     "name": "Aykiz Intelligence",
     "email": "hello@aykizintelligence.com"
   },
   "homepage": "https://aykizintelligence.com",
   "build": {
-    "appId": "com.aykizintelligence.lumen",
-    "productName": "Lumen",
+    "appId": "com.aykizintelligence.aylight",
+    "productName": "aylight",
     "files": [
       "main.js",
       "preload.js",
       "ui/**",
       "package.json"
     ],
-    "artifactName": "Lumen-${os}-${arch}.${ext}",
+    "artifactName": "aylight-${os}-${arch}.${ext}",
     "mac": {
       "category": "public.app-category.productivity",
       "target": [

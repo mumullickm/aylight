@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 
-app.setName('Lumen');
+app.setName('aylight');
 
 const TOP = 86;
 const PARTITION = 'persist:main';
@@ -21,7 +21,7 @@ const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8'))
 const writeJSON = (f, v) => { try { fs.writeFileSync(f, JSON.stringify(v)); } catch {} };
 
 function cleanUA(ua) {
-  return ua.replace(/ Electron\/\S+/, '').replace(/ Lumen\/\S+/, '').replace(/ lumen\/\S+/, '');
+  return ua.replace(/ Electron\/\S+/, '').replace(/ aylight\/\S+/, '').replace(/ Aylight\/\S+/, '');
 }
 
 function toURL(input) {
