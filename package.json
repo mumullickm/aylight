@@ -1,7 +1,7 @@
 {
   "name": "aylight",
   "productName": "aylight",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -45,7 +45,8 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "identity": "-"
     },
     "win": {
       "target": [
@@ -80,7 +81,11 @@
       ],
       "maintainer": "Aykiz Intelligence <hello@aykizintelligence.com>"
     },
-    "publish": { "provider": "github", "owner": "mumullickm", "repo": "aylight" }
+    "publish": {
+      "provider": "github",
+      "owner": "mumullickm",
+      "repo": "aylight"
+    }
   },
   "packageManager": "pnpm@11.22.0",
   "dependencies": {
