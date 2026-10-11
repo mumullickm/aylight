@@ -75,11 +75,63 @@ function pushState() {
   });
 }
 
+const HISTORY_DAYS = 90;
+let historyTimer = null;
+
+function pruneHistory() {
+  const cutoff = Date.now() - HISTORY_DAYS * 86400000;
+  history = history.filter((h) => h.t > cutoff);
+  if (history.length > 5000) history.length = 5000;
+}
+
 function recordVisit(url, title) {
   if (!/^https?:/.test(url)) return;
   history = history.filter((h) => h.url !== url);
   history.unshift({ url, title, t: Date.now() });
-  if (history.length > 5000) history.length = 5000;
+  pruneHistory();
+  clearTimeout(historyTimer);
+  historyTimer = setTimeout(() => writeJSON(file('history.json'), history), 2000);
+}
+
+const bare = (u) => u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+
+function jump(q) {
+  const s = (q || '').trim().toLowerCase();
+  const hit = (title, url) => !s || (title || '').toLowerCase().includes(s) || bare(url).toLowerCase().includes(s);
+  const seen = new Set();
+  const take = (list, n) => {
+    const out = [];
+    for (const x of list) {
+      if (out.length >= n) break;
+      if (!x.url || seen.has(x.url) || !hit(x.title, x.url)) continue;
+      seen.add(x.url);
+      out.push(x);
+    }
+    return out;
+  };
+  const openTabs = tabs.filter((t) => t.url !== NEWTAB).map((t) => ({ id: t.id, title: t.title, url: t.url, favicon: t.favicon }));
+  return {
+    tabs: take(openTabs, s ? 4 : 6),
+    bookmarks: take(bookmarks, 3),
+    history: take(history, s ? 5 : 4),
+    search: s && !/^[a-z][a-z0-9+.-]*:\/\//i.test(s) ? q.trim() : '',
+  };
+}
+
+let jumping = false;
+function openJump() {
+  jumping = true;
+  const a = active();
+  if (a) a.view.setVisible(false);
+  win.webContents.focus();
+  win.webContents.send('jump-open');
+}
+
+function closeJump() {
+  if (!jumping) return;
+  jumping = false;
+  layout();
+  if (win && !win.isDestroyed()) win.webContents.send('jump-close');
 }
 
 function createTab(url = NEWTAB, focus = true) {
@@ -135,6 +187,7 @@ function createTab(url = NEWTAB, focus = true) {
 function activate(id) {
   if (!tabs.some((t) => t.id === id)) return;
   closeFind();
+  closeJump();
   activeId = id;
   layout();
   pushState();
@@ -253,6 +306,7 @@ function buildMenu() {
           click: () => { const u = closedStack.pop(); if (u) createTab(u); },
         },
         { label: 'Open Location', accelerator: 'CmdOrCtrl+L', click: focusAddress },
+        { label: 'Jump To…', accelerator: 'CmdOrCtrl+K', click: () => (jumping ? closeJump() : openJump()) },
         { type: 'separator' },
         { label: 'Find', accelerator: 'CmdOrCtrl+F', click: openFind },
         { label: 'Find Next', accelerator: 'CmdOrCtrl+G', click: () => win.webContents.send('find-step', true) },
@@ -373,6 +427,14 @@ ipcMain.on('find', (_e, { text, forward, next }) => {
   a.view.webContents.findInPage(text, { forward, findNext: !next });
 });
 ipcMain.on('find-close', () => { closeFind(); onActive((wc) => wc.focus())(); });
+ipcMain.handle('jump', (_e, q) => jump(q));
+ipcMain.on('jump-close', () => { closeJump(); onActive((wc) => wc.focus())(); });
+ipcMain.on('jump-go', (_e, { tab, url, newTab }) => {
+  closeJump();
+  if (tab) return activate(tab);
+  if (newTab || !active()) createTab(url, true);
+  else { const a = active(); a.view.webContents.loadURL(url); a.view.webContents.focus(); }
+});
 ipcMain.handle('complete', (_e, q) => {
   const s = q.toLowerCase();
   for (const h of history) {
@@ -402,6 +464,7 @@ app.whenReady().then(() => {
     item.once('done', (_ev, state) => { if (state === 'completed') shell.showItemInFolder(item.getSavePath()); });
   });
   history = readJSON(file('history.json'), []);
+  pruneHistory();
   bookmarks = readJSON(file('bookmarks.json'), []);
   settings = { ...settings, ...readJSON(file('settings.json'), {}) };
   buildMenu();

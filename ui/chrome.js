@@ -139,3 +139,101 @@ findq.onkeydown = (e) => {
 $('findprev').onclick = () => runFind(false, true);
 $('findnext').onclick = () => runFind(true, true);
 $('findx').onclick = () => api.send('find-close');
+
+const jump = $('jump');
+const jumpq = $('jumpq');
+const jumpList = $('jump-list');
+let hits = [];
+let hitIndex = 0;
+let jumpSeq = 0;
+
+const clockIcon = '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/></svg>';
+const searchIcon = '<svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>';
+
+function hitRow(h, i) {
+  const el = document.createElement('div');
+  el.className = 'hit' + (i === hitIndex ? ' on' : '');
+  const lead = document.createElement('span');
+  lead.className = 'lead';
+  if (h.kind === 'history') lead.innerHTML = clockIcon;
+  else if (h.kind === 'search') lead.innerHTML = searchIcon;
+  else lead.append(lead$(h));
+  const t = document.createElement('span');
+  t.className = 't';
+  t.textContent = h.kind === 'search' ? `Search Google for “${h.q}”` : (h.title || displayURL(h.url));
+  const u = document.createElement('span');
+  u.className = 'u';
+  u.textContent = h.kind === 'search' ? '' : displayURL(h.url).split('/')[0];
+  const k = document.createElement('span');
+  k.className = 'key';
+  k.textContent = h.kind === 'tab' ? '↵' : '↵  ⌘↵ new tab';
+  el.append(lead, t, u, k);
+  el.onmousemove = () => { if (hitIndex !== i) { hitIndex = i; paintHits(); } };
+  el.onclick = (e) => go(e.metaKey || e.ctrlKey);
+  return el;
+}
+
+function lead$(item) {
+  if (item.favicon) {
+    const img = document.createElement('img'); img.className = 'fav'; img.src = item.favicon;
+    img.onerror = () => { img.removeAttribute('src'); img.classList.add('blank'); };
+    return img;
+  }
+  const s = document.createElement('span'); s.className = 'fav blank'; return s;
+}
+
+function paintHits() {
+  jumpList.textContent = '';
+  let last = null;
+  hits.forEach((h, i) => {
+    if (h.kind !== last) {
+      const sec = document.createElement('div');
+      sec.className = 'sec';
+      sec.textContent = { tab: 'Tabs', bookmark: 'Bookmarks', history: 'History', search: 'Search' }[h.kind];
+      jumpList.append(sec);
+      last = h.kind;
+    }
+    jumpList.append(hitRow(h, i));
+  });
+  if (!hits.length) {
+    const e = document.createElement('div'); e.id = 'jump-empty';
+    e.textContent = 'Nothing yet. Pages you visit show up here.';
+    jumpList.append(e);
+  }
+  const on = jumpList.querySelector('.hit.on');
+  if (on) on.scrollIntoView({ block: 'nearest' });
+}
+
+async function runJump() {
+  const seq = ++jumpSeq;
+  const r = await api.jump(jumpq.value);
+  if (seq !== jumpSeq) return;
+  hits = [
+    ...r.tabs.map((x) => ({ kind: 'tab', ...x })),
+    ...r.bookmarks.map((x) => ({ kind: 'bookmark', ...x })),
+    ...r.history.map((x) => ({ kind: 'history', ...x })),
+    ...(r.search ? [{ kind: 'search', q: r.search }] : []),
+  ];
+  hitIndex = 0;
+  paintHits();
+}
+
+function go(newTab) {
+  const h = hits[hitIndex];
+  if (!h) return;
+  if (h.kind === 'tab') api.send('jump-go', { tab: h.id });
+  else if (h.kind === 'search') api.send('jump-go', { url: 'https://www.google.com/search?q=' + encodeURIComponent(h.q), newTab });
+  else api.send('jump-go', { url: h.url, newTab });
+}
+
+api.on('jump-open', () => { jump.hidden = false; jumpq.value = ''; jumpq.focus(); runJump(); });
+api.on('jump-close', () => { jump.hidden = true; });
+
+jumpq.oninput = () => runJump();
+jumpq.onkeydown = (e) => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); hitIndex = Math.min(hits.length - 1, hitIndex + 1); paintHits(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); hitIndex = Math.max(0, hitIndex - 1); paintHits(); }
+  else if (e.key === 'Enter') { e.preventDefault(); go(e.metaKey || e.ctrlKey); }
+  else if (e.key === 'Escape') api.send('jump-close');
+};
+jump.onmousedown = (e) => { if (e.target === jump) api.send('jump-close'); };
