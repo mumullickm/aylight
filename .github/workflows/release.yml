@@ -51,5 +51,5 @@ jobs:
             dist/*.exe
             dist/*.AppImage
             dist/*.deb
-            dist/*.yml
+            dist/latest*.yml
             dist/*.blockmap
