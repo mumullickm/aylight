@@ -85,6 +85,14 @@ function render() {
   document.body.classList.toggle('secure', !!(a && a.url.startsWith('https://')));
   if (!editing) address.value = a ? displayURL(a.url) : '';
   renderDownloads();
+  const u = state.update;
+  $('update').hidden = !u;
+  if (u) {
+    $('update-t').textContent = 'aylight ' + u.version;
+    $('update-s').textContent = u.stage === 'ready' ? 'Downloaded · click to restart'
+      : u.stage === 'downloading' ? 'Downloading ' + (u.pct || 0) + '%'
+      : 'Is out · click to get it';
+  }
 }
 
 api.on('state', (s) => { state = s; render(); });
@@ -299,4 +307,5 @@ function renderDownloads() {
   }
 }
 
+$('update').onclick = () => api.send('update-go');
 $('dl-clear').onclick = () => api.send('downloads-clear');

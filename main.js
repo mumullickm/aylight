@@ -2,6 +2,8 @@ const { app, BrowserWindow, WebContentsView, ipcMain, Menu, session, clipboard, 
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
+const { autoUpdater } = require('electron-updater');
+const https = require('https');
 
 app.setName('aylight');
 
@@ -23,6 +25,8 @@ let history = [];
 let bookmarks = [];
 let settings = { sidebar: true };
 let downloads = [];
+let update = null;
+const PAGE = 'https://aykizintelligence.com/aylight/';
 const downloadItems = new Map();
 let nextDownloadId = 1;
 
@@ -69,6 +73,7 @@ function pushState() {
     bookmarked: !!(a && bookmarks.some((b) => b.url === a.url)),
     bookmarks,
     downloads,
+    update,
     tabs: tabs.map((t) => ({
       id: t.id,
       title: t.title,
@@ -492,6 +497,51 @@ ipcMain.handle('complete', (_e, q) => {
   return null;
 });
 
+const newer = (a, b) => {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) { if ((x[i] || 0) > (y[i] || 0)) return true; if ((x[i] || 0) < (y[i] || 0)) return false; }
+  return false;
+};
+
+function setUpdate(u) { update = u; pushState(); }
+
+function checkPage() {
+  const req = https.get('https://api.github.com/repos/mumullickm/aylight/releases/latest',
+    { headers: { 'user-agent': 'aylight/' + app.getVersion(), accept: 'application/vnd.github+json' } }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => {
+        try {
+          const v = String(JSON.parse(body).tag_name || '').replace(/^v/, '');
+          if (v && newer(v, app.getVersion())) setUpdate({ version: v, stage: 'page' });
+        } catch {}
+      });
+    });
+  req.on('error', () => {});
+}
+
+function startUpdates() {
+  if (!app.isPackaged) return;
+  const self = isWin || (process.platform === 'linux' && process.env.APPIMAGE);
+  if (!self) { checkPage(); setInterval(checkPage, 6 * 3600000); return; }
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = null;
+  autoUpdater.on('update-available', (i) => setUpdate({ version: i.version, stage: 'downloading', pct: 0 }));
+  autoUpdater.on('download-progress', (p) => { if (update) setUpdate({ ...update, pct: Math.round(p.percent) }); });
+  autoUpdater.on('update-downloaded', (i) => setUpdate({ version: i.version, stage: 'ready' }));
+  autoUpdater.on('error', () => { if (update && update.stage === 'downloading') setUpdate({ ...update, stage: 'page' }); });
+  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  setTimeout(check, 8000);
+  setInterval(check, 6 * 3600000);
+}
+
+ipcMain.on('update-go', () => {
+  if (!update) return;
+  if (update.stage === 'ready') { saveSession(); autoUpdater.quitAndInstall(); }
+  else if (update.stage === 'page') createTab(PAGE, true);
+});
+
 if (!app.requestSingleInstanceLock()) app.quit();
 
 app.on('second-instance', () => {
@@ -536,6 +586,7 @@ app.whenReady().then(() => {
   settings = { ...settings, ...readJSON(file('settings.json'), {}) };
   buildMenu();
   createWindow();
+  startUpdates();
   app.on('activate', () => { if (!win) createWindow(); });
 });
 
