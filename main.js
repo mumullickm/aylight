@@ -31,6 +31,7 @@ let update = null;
 let shieldView = null;
 let shieldTimer = null;
 let shieldClosedAt = 0;
+let shieldHold = 0;
 const PAGE = 'https://aykizintelligence.com/aylight/';
 const downloadItems = new Map();
 let nextDownloadId = 1;
@@ -129,7 +130,7 @@ function openShield(r) {
   shieldView.setBounds({ x, y: Math.round(r.bottom) + 6 - POP_M, width: POP_W + POP_M * 2, height: POP_H + POP_M * 2 });
   win.contentView.addChildView(shieldView);
   const wc = shieldView.webContents;
-  wc.on('blur', closeShield);
+  wc.on('blur', () => { if (Date.now() < shieldHold) wc.focus(); else closeShield(); });
   wc.once('did-finish-load', () => { pushState(); wc.focus(); });
   wc.loadFile(path.join(__dirname, 'ui', 'shield.html'));
 }
@@ -499,6 +500,7 @@ ipcMain.on('shield-toggle', () => {
   const a = active();
   if (!a || !shield.siteOf(a.url)) return;
   shield.toggle(a.url);
+  shieldHold = Date.now() + 2000;
   a.view.webContents.reload();
   pushState();
 });
