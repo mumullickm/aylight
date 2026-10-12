@@ -85,6 +85,7 @@ function render() {
   document.body.classList.toggle('secure', !!(a && a.url.startsWith('https://')));
   if (!editing) address.value = a ? displayURL(a.url) : '';
   renderDownloads();
+  renderShield();
   const u = state.update;
   $('update').hidden = !u;
   if (u) {
@@ -309,3 +310,21 @@ function renderDownloads() {
 
 $('update').onclick = () => api.send('update-go');
 $('dl-clear').onclick = () => api.send('downloads-clear');
+
+function renderShield() {
+  const sh = state.shield;
+  const btn = $('shield');
+  btn.hidden = !(sh && sh.site);
+  if (!sh) return;
+  const n = sh.counts.ads + sh.counts.trackers + sh.counts.fp;
+  btn.classList.toggle('off', sh.off || !sh.ready);
+  $('shield-n').textContent = sh.off || !sh.ready ? '' : n.toLocaleString();
+  btn.title = !sh.ready ? 'Shield is getting its lists' : sh.off ? 'Shield is off for ' + sh.site : 'Shield, ' + n + ' blocked on this page';
+  btn.setAttribute('aria-label', btn.title);
+  $('shield-total-n').textContent = sh.total.toLocaleString();
+}
+
+$('shield').onclick = () => {
+  const r = $('shield').getBoundingClientRect();
+  api.send('shield-open', { right: r.right, bottom: r.bottom });
+};

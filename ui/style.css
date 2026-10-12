@@ -142,6 +142,19 @@ body.secure #lock { display: block; }
 #address { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--ink); font: inherit;
   font-size: 13.5px; user-select: text; }
 #address::placeholder { color: var(--ink-3); }
+#shield { -webkit-app-region: no-drag; height: 28px; min-width: 28px; border: 0; border-radius: 8px; padding: 0 8px 0 6px;
+  margin-right: 2px; background: rgba(31,122,82,.12); color: var(--ring); display: flex; align-items: center; justify-content: center;
+  gap: 5px; font: inherit; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; flex: none; }
+#shield[hidden] { display: none; }
+#shield:hover { background: rgba(31,122,82,.2); }
+#shield svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#shield.off { background: none; color: var(--ink-3); padding: 0; width: 28px; }
+#shield.off:hover { background: var(--hover); }
+#shield.off .tick { display: none; }
+#shield-n:empty { display: none; }
+#shield-total { display: flex; align-items: baseline; justify-content: space-between; flex: none; margin-top: 12px; padding: 0 10px;
+  font-size: 12px; color: var(--ink-2); -webkit-app-region: no-drag; }
+#shield-total b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 #star { width: 28px; height: 28px; color: var(--ink-3); }
 #star.on { color: #e0a93a; }
 #star.on svg { fill: currentColor; }

@@ -1,0 +1,45 @@
+:root {
+  --ink: #1b1f26;
+  --ink-2: rgba(27,31,38,.72);
+  --ink-3: rgba(27,31,38,.45);
+  --pop: #fafbfc;
+  --edge: rgba(255,255,255,.7);
+  --rule: rgba(27,31,38,.08);
+  --ring: #1f7a52;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e9ecf1;
+    --ink-2: rgba(233,236,241,.72);
+    --ink-3: rgba(233,236,241,.45);
+    --pop: #202429;
+    --edge: rgba(255,255,255,.12);
+    --rule: rgba(255,255,255,.08);
+    --ring: #6fd0a0;
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; overflow: hidden; background: transparent; color: var(--ink); user-select: none;
+  font: 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body { padding: 24px; }
+#pop { width: 268px; padding: 14px 14px 12px; border-radius: 14px; background: var(--pop); border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 18px 40px -14px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.08);
+  display: flex; flex-direction: column; gap: 10px; animation: in .14s ease-out; }
+@keyframes in { from { opacity: 0; transform: translateY(-4px); } }
+.head { display: flex; align-items: center; gap: 8px; }
+.head svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--ring); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+body.is-off .head svg { stroke: var(--ink-3); }
+body.is-off .tick { display: none; }
+#status { font-weight: 600; font-size: 13.5px; }
+.fill { flex: 1; }
+#site { font-size: 11px; color: var(--ink-3); max-width: 120px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#big { font-size: 34px; font-weight: 600; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+#what { font-size: 13px; font-weight: 500; color: var(--ink-3); letter-spacing: 0; }
+body.is-off #big { color: var(--ink-3); }
+.stats { display: flex; flex-direction: column; gap: 6px; padding-top: 2px; }
+.stat { display: flex; align-items: baseline; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+.stat b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rule { height: 1px; background: var(--rule); margin: 2px 0; }
+.off { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); min-height: 28px; }
+.off input { width: 16px; height: 16px; margin: 0; accent-color: var(--ring); }
+#lists { font-size: 11px; line-height: 1.4; color: var(--ink-3); }

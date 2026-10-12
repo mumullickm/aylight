@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+<link rel="stylesheet" href="pop.css">
+</head>
+<body>
+<div id="pop" role="dialog" aria-label="Shield">
+  <div class="head">
+    <svg viewBox="0 0 16 16"><path d="M8 1.5 13 3.5v4c0 3.2-2.1 5.6-5 6.9-2.9-1.3-5-3.7-5-6.9v-4z"/><path class="tick" d="m5.8 8 1.5 1.5L10.3 6.5"/></svg>
+    <span id="status">Shield is on</span>
+    <span class="fill"></span>
+    <span id="site"></span>
+  </div>
+  <div id="big"><span id="n">0</span> <span id="what">blocked on this page</span></div>
+  <div class="stats">
+    <div class="stat"><span>Ads</span><b id="ads">0</b></div>
+    <div class="stat"><span>Trackers</span><b id="trackers">0</b></div>
+    <div class="stat"><span>Fingerprinting scripts</span><b id="fp">0</b></div>
+  </div>
+  <div class="rule"></div>
+  <label class="off"><input type="checkbox" id="off">Off for this site</label>
+  <div id="lists"></div>
+</div>
+<script src="pop.js"></script>
+</body>
+</html>

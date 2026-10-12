@@ -24,6 +24,7 @@
   </button>
   <div id="dl-head" hidden><span>Downloads</span><button id="dl-clear" class="link">Clear</button></div>
   <div id="downloads"></div>
+  <div id="shield-total"><span>Blocked since launch</span><b id="shield-total-n">0</b></div>
 </aside>
 <main>
   <header id="bar">
@@ -43,6 +44,10 @@
     <form id="form">
       <span id="lock"><svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
       <input id="address" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL">
+      <button type="button" id="shield" aria-label="Shield">
+        <svg viewBox="0 0 16 16"><path d="M8 1.5 13 3.5v4c0 3.2-2.1 5.6-5 6.9-2.9-1.3-5-3.7-5-6.9v-4z"/><path class="tick" d="m5.8 8 1.5 1.5L10.3 6.5"/></svg>
+        <span id="shield-n"></span>
+      </button>
       <button type="button" id="pin" class="icon" title="Pin tab (⌘⇧P)" aria-label="Pin this tab">
         <svg viewBox="0 0 16 16"><path d="M6 2h4M7 2v3.5L4.5 9h7L9 5.5V2M8 9v5"/></svg>
       </button>

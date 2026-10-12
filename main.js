@@ -4,8 +4,10 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { autoUpdater } = require('electron-updater');
 const https = require('https');
+const shield = require('./shield');
 
 app.setName('aylight');
+if (process.env.AYLIGHT_PROFILE) app.setPath('userData', process.env.AYLIGHT_PROFILE);
 
 const TOP = 56;
 const SIDEBAR = 236;
@@ -26,6 +28,9 @@ let bookmarks = [];
 let settings = { sidebar: true };
 let downloads = [];
 let update = null;
+let shieldView = null;
+let shieldTimer = null;
+let shieldClosedAt = 0;
 const PAGE = 'https://aykizintelligence.com/aylight/';
 const downloadItems = new Map();
 let nextDownloadId = 1;
@@ -65,7 +70,7 @@ function pushState() {
   if (!win || win.isDestroyed()) return;
   const a = active();
   const nav = a ? a.view.webContents.navigationHistory : null;
-  win.webContents.send('state', {
+  const s = {
     activeId,
     sidebar: settings.sidebar,
     canBack: nav ? nav.canGoBack() : false,
@@ -74,6 +79,7 @@ function pushState() {
     bookmarks,
     downloads,
     update,
+    shield: shieldState(a),
     tabs: tabs.map((t) => ({
       id: t.id,
       title: t.title,
@@ -82,7 +88,59 @@ function pushState() {
       loading: t.loading,
       pinned: !!t.pinned,
     })),
+  };
+  win.webContents.send('state', s);
+  if (shieldView) shieldView.webContents.send('state', s);
+}
+
+function shieldState(a) {
+  const site = a ? shield.siteOf(a.url) : '';
+  return {
+    site,
+    ready: shield.ready(),
+    off: !!site && shield.isOff(a.url),
+    counts: a ? a.shield : shield.fresh(),
+    total: shield.total(),
+    where: isMac ? 'this Mac' : isWin ? 'this PC' : 'this computer',
+  };
+}
+
+function shieldChanged() {
+  if (shieldTimer) return;
+  shieldTimer = setTimeout(() => { shieldTimer = null; pushState(); }, 200);
+}
+
+const POP_W = 268;
+const POP_H = 258;
+const POP_M = 24;
+
+function openShield(r) {
+  if (shieldView) return closeShield();
+  if (Date.now() - shieldClosedAt < 300) return;
+  const a = active();
+  if (!a || !shield.siteOf(a.url)) return;
+  closeFind();
+  shieldView = new WebContentsView({
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   });
+  shieldView.setBackgroundColor('#00000000');
+  const [w] = win.getContentSize();
+  const x = Math.max(0, Math.min(w - POP_W - POP_M * 2, Math.round(r.right) - POP_W - POP_M));
+  shieldView.setBounds({ x, y: Math.round(r.bottom) + 6 - POP_M, width: POP_W + POP_M * 2, height: POP_H + POP_M * 2 });
+  win.contentView.addChildView(shieldView);
+  const wc = shieldView.webContents;
+  wc.on('blur', closeShield);
+  wc.once('did-finish-load', () => { pushState(); wc.focus(); });
+  wc.loadFile(path.join(__dirname, 'ui', 'shield.html'));
+}
+
+function closeShield() {
+  if (!shieldView) return;
+  const v = shieldView;
+  shieldView = null;
+  shieldClosedAt = Date.now();
+  if (win && !win.isDestroyed()) win.contentView.removeChildView(v);
+  v.webContents.close();
 }
 
 const HISTORY_DAYS = 90;
@@ -131,6 +189,7 @@ function jump(q) {
 let jumping = false;
 function openJump() {
   jumping = true;
+  closeShield();
   const a = active();
   if (a) a.view.setVisible(false);
   win.webContents.focus();
@@ -149,7 +208,7 @@ function createTab(url = NEWTAB, focus = true, pinned = false) {
     webPreferences: { partition: PARTITION, sandbox: true, contextIsolation: true },
   });
   view.setBorderRadius(RADIUS);
-  const tab = { id: nextId++, view, title: 'New Tab', url, favicon: null, loading: false, pinned };
+  const tab = { id: nextId++, view, title: 'New Tab', url, favicon: null, loading: false, pinned, shield: shield.fresh() };
   const wc = view.webContents;
 
   wc.setWindowOpenHandler(({ url: target, disposition }) => {
@@ -178,7 +237,8 @@ function createTab(url = NEWTAB, focus = true, pinned = false) {
     recordVisit(u, tab.title);
     pushState();
   };
-  wc.on('did-navigate', onNav);
+  wc.on('did-navigate', (e, u) => { tab.shield = shield.fresh(); onNav(e, u); });
+  wc.on('dom-ready', () => shield.cosmetics(wc, wc.getURL()));
   wc.on('did-navigate-in-page', (e, u, isMain) => { if (isMain) onNav(e, u); });
   wc.on('context-menu', (_e, p) => contextMenu(wc, p));
   wc.on('found-in-page', (_e, r) => {
@@ -199,6 +259,7 @@ function activate(id) {
   if (!tabs.some((t) => t.id === id)) return;
   closeFind();
   closeJump();
+  closeShield();
   activeId = id;
   layout();
   pushState();
@@ -413,7 +474,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   });
   win.loadFile(path.join(__dirname, 'ui', 'index.html'));
-  win.on('resize', layout);
+  win.on('resize', () => { closeShield(); layout(); });
   win.on('close', saveSession);
   win.on('closed', () => { win = null; tabs = []; activeId = null; });
 
@@ -432,6 +493,15 @@ function createWindow() {
 
 ipcMain.on('new-tab', () => createTab());
 ipcMain.on('close-tab', (_e, id) => closeTab(id));
+ipcMain.on('shield-open', (_e, r) => openShield(r));
+ipcMain.on('shield-close', () => { closeShield(); onActive((wc) => wc.focus())(); });
+ipcMain.on('shield-toggle', () => {
+  const a = active();
+  if (!a || !shield.siteOf(a.url)) return;
+  shield.toggle(a.url);
+  a.view.webContents.reload();
+  pushState();
+});
 ipcMain.on('pin-toggle', (_e, id) => togglePin(id));
 ipcMain.on('activate', (_e, id) => activate(id));
 ipcMain.on('navigate', (_e, text) => {
@@ -580,6 +650,8 @@ app.whenReady().then(() => {
     });
     pushState();
   });
+  shield.init(shieldChanged);
+  shield.attach(ses, (id) => tabs.find((t) => t.view.webContents.id === id));
   history = readJSON(file('history.json'), []);
   pruneHistory();
   bookmarks = readJSON(file('bookmarks.json'), []);

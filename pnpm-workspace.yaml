@@ -1,3 +1,7 @@
 allowBuilds:
   electron: true
   electron-winstaller: false
+overrides:
+  '@ghostery/adblocker-content': 2.18.2
+  '@ghostery/adblocker-extended-selectors': 2.18.2
+  tldts-core: 7.4.16
